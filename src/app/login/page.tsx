@@ -68,14 +68,24 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6 pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400 mb-2">Demo credentials:</p>
-          <div className="space-y-1 text-xs text-gray-500">
-            <div>👤 employee@demo.com</div>
-            <div>🧑‍💼 manager@demo.com</div>
-            <div>⚙️ admin@demo.com</div>
-            <div className="text-gray-400">Password: Demo@1234</div>
-          </div>
-        </div>
+  <p className="text-xs text-gray-400 mb-2">Quick login as:</p>
+  <div className="grid grid-cols-3 gap-2">
+    {[
+      { label: '👤 Employee', email: 'employee@demo.com' },
+      { label: '🧑‍💼 Manager', email: 'manager@demo.com' },
+      { label: '⚙️ Admin', email: 'admin@demo.com' },
+    ].map(role => (
+      <button
+        key={role.email}
+        onClick={() => { setEmail(role.email); setPassword('Demo@1234') }}
+        className="text-xs border border-gray-200 rounded-lg py-2 px-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 text-gray-500 transition text-center"
+      >
+        {role.label}
+      </button>
+    ))}
+  </div>
+  <p className="text-xs text-gray-300 text-center mt-2">click any role to autofill</p>
+</div>
       </div>
     </div>
   )
