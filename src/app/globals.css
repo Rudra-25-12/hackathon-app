@@ -128,3 +128,13 @@
     @apply font-sans;
   }
 }
+:root {
+  --atomberg-dark: #0a0a0a;
+  --atomberg-navy: #111827;
+  --atomberg-orange: #f97316;
+  --atomberg-yellow: #fbbf24;
+}
+
+body {
+  background-color: #f8fafc;
+}
