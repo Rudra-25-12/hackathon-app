@@ -3,241 +3,167 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-interface Goal {
-  id: string
-  employee_id: string
-  employee_name: string
-  title: string
-  description: string
-  thrust_area: string
-  uom_type: string
-  target: number
-  weightage: number
-  status: string
-}
+interface Goal { id:string; employee_id:string; employee_name:string; title:string; description:string; thrust_area:string; uom_type:string; target:number; weightage:number; status:string }
+interface TeamMember { id:string; name:string; department:string }
 
-interface TeamMember {
-  id: string
-  name: string
-  department: string
-}
+const inputStyle = { background:'#242d3f', border:'1px solid #2a3347', color:'#e2e8f0' }
 
-export default function ApprovalClient({ goals, teamMembers }: {
-  goals: Goal[]
-  teamMembers: TeamMember[]
-}) {
-  const [selectedEmployee, setSelectedEmployee] = useState<string>('all')
-  const [editingGoal, setEditingGoal] = useState<string | null>(null)
-  const [editValues, setEditValues] = useState<{ target: string; weightage: string }>({ target: '', weightage: '' })
-  const [rejectNote, setRejectNote] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState<string | null>(null)
+export default function ApprovalClient({ goals, teamMembers }: { goals:Goal[]; teamMembers:TeamMember[] }) {
+  const [selected, setSelected] = useState('all')
+  const [editing, setEditing] = useState<string|null>(null)
+  const [editVals, setEditVals] = useState({target:'',weightage:''})
+  const [rejectNote, setRejectNote] = useState<Record<string,string>>({})
+  const [loading, setLoading] = useState<string|null>(null)
   const supabase = createClient()
   const router = useRouter()
 
-  const filtered = selectedEmployee === 'all'
-    ? goals
-    : goals.filter(g => g.employee_id === selectedEmployee)
+  const filtered = selected==='all' ? goals : goals.filter(g=>g.employee_id===selected)
+  const grouped = filtered.reduce<Record<string,Goal[]>>((acc,g)=>{
+    if(!acc[g.employee_name]) acc[g.employee_name]=[]
+    acc[g.employee_name].push(g); return acc
+  },{})
 
-  const grouped = filtered.reduce<Record<string, Goal[]>>((acc, g) => {
-    if (!acc[g.employee_name]) acc[g.employee_name] = []
-    acc[g.employee_name].push(g)
-    return acc
-  }, {})
-
-  const handleApprove = async (goalId: string) => {
+  const handleApprove = async (goalId:string) => {
     setLoading(goalId)
-    await supabase.from('goals').update({ status: 'approved' }).eq('id', goalId)
-
-    const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('audit_logs').insert({
-      entity_type: 'goal', entity_id: goalId,
-      changed_by: user?.id,
-      change_description: 'Goal approved by manager'
-    })
-
-    const goal = goals.find(g => g.id === goalId)
-    if (goal) {
-      await fetch('/api/email/approved', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goalId, employeeId: goal.employee_id })
-      })
-    }
-
-    setLoading(null)
-    router.refresh()
+    await supabase.from('goals').update({status:'approved'}).eq('id',goalId)
+    const {data:{user}} = await supabase.auth.getUser()
+    await supabase.from('audit_logs').insert({entity_type:'goal',entity_id:goalId,changed_by:user?.id,change_description:'Goal approved by manager'})
+    const goal = goals.find(g=>g.id===goalId)
+    if(goal) await fetch('/api/email/approved',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goalId,employeeId:goal.employee_id})})
+    setLoading(null); router.refresh()
   }
 
-  const handleReject = async (goalId: string) => {
+  const handleReject = async (goalId:string) => {
     setLoading(goalId)
-    await supabase.from('goals').update({ status: 'rejected' }).eq('id', goalId)
-
-    const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('audit_logs').insert({
-      entity_type: 'goal', entity_id: goalId,
-      changed_by: user?.id,
-      change_description: `Goal rejected. Note: ${rejectNote[goalId] || 'No note provided'}`
-    })
-
-    const goal = goals.find(g => g.id === goalId)
-    if (goal) {
-      await fetch('/api/email/rejected', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          goalId,
-          employeeId: goal.employee_id,
-          note: rejectNote[goalId] || ''
-        })
-      })
-    }
-
-    setLoading(null)
-    router.refresh()
+    await supabase.from('goals').update({status:'rejected'}).eq('id',goalId)
+    const {data:{user}} = await supabase.auth.getUser()
+    await supabase.from('audit_logs').insert({entity_type:'goal',entity_id:goalId,changed_by:user?.id,change_description:`Rejected. Note: ${rejectNote[goalId]||'none'}`})
+    const goal = goals.find(g=>g.id===goalId)
+    if(goal) await fetch('/api/email/rejected',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goalId,employeeId:goal.employee_id,note:rejectNote[goalId]||''})})
+    setLoading(null); router.refresh()
   }
 
-  const handleSaveEdit = async (goalId: string) => {
+  const handleSaveEdit = async (goalId:string) => {
     setLoading(goalId)
-    await supabase.from('goals').update({
-      target: parseFloat(editValues.target),
-      weightage: parseFloat(editValues.weightage),
-    }).eq('id', goalId)
-
-    const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('audit_logs').insert({
-      entity_type: 'goal', entity_id: goalId,
-      changed_by: user?.id,
-      change_description: `Manager edited: target → ${editValues.target}, weightage → ${editValues.weightage}%`
-    })
-
-    setEditingGoal(null)
-    setLoading(null)
-    router.refresh()
+    await supabase.from('goals').update({target:parseFloat(editVals.target),weightage:parseFloat(editVals.weightage)}).eq('id',goalId)
+    const {data:{user}} = await supabase.auth.getUser()
+    await supabase.from('audit_logs').insert({entity_type:'goal',entity_id:goalId,changed_by:user?.id,change_description:`Manager edited: target→${editVals.target}, weightage→${editVals.weightage}%`})
+    setEditing(null); setLoading(null); router.refresh()
   }
 
-  const uomLabel: Record<string, string> = {
-    numeric_min: 'Higher is better',
-    numeric_max: 'Lower is better',
-    timeline: 'Timeline',
-    zero: 'Zero-based'
-  }
+  const uomLabel:Record<string,string> = {numeric_min:'Higher is better',numeric_max:'Lower is better',timeline:'Timeline',zero:'Zero-based'}
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Goal Approvals</h1>
-        <p className="text-gray-500 text-sm mt-1">Review, edit and approve your team's goals</p>
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-sm font-medium mb-1" style={{color:'#fbbf24'}}>Manager</p>
+          <h1 className="text-3xl font-black" style={{color:'#f1f5f9'}}>Goal Approvals</h1>
+          <p className="text-sm mt-1" style={{color:'#475569'}}>Review, edit and approve your team's goals</p>
+        </div>
       </div>
 
+      {/* Filter */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        <button onClick={() => setSelectedEmployee('all')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${selectedEmployee === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          All Team
-        </button>
-        {teamMembers.map(m => (
-          <button key={m.id} onClick={() => setSelectedEmployee(m.id)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${selectedEmployee === m.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {m.name}
-          </button>
-        ))}
+        {['all',...teamMembers.map(m=>m.id)].map(id=>{
+          const label = id==='all'?'All Team':teamMembers.find(m=>m.id===id)?.name??''
+          return (
+            <button key={id} onClick={()=>setSelected(id)}
+              className="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={{background:selected===id?'#fbbf24':' #1e2433',color:selected===id?'#0a0a0a':'#64748b',border:'1px solid',borderColor:selected===id?'#fbbf24':'#2a3347'}}>
+              {label}
+            </button>
+          )
+        })}
       </div>
 
-      {Object.keys(grouped).length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400">
+      {Object.keys(grouped).length===0 ? (
+        <div className="rounded-2xl p-16 text-center" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
           <p className="text-4xl mb-3">📋</p>
-          <p className="font-medium">No goals submitted yet</p>
-          <p className="text-sm mt-1">Goals will appear here once your team submits them</p>
+          <p className="font-semibold mb-1" style={{color:'#94a3b8'}}>No goals submitted yet</p>
+          <p className="text-sm" style={{color:'#334155'}}>Goals appear here once your team submits them</p>
         </div>
       ) : (
-        Object.entries(grouped).map(([employeeName, empGoals]) => {
-          const totalW = empGoals.reduce((s, g) => s + g.weightage, 0)
-          const allApproved = empGoals.every(g => g.status === 'approved')
-
+        Object.entries(grouped).map(([name,empGoals])=>{
+          const totalW = empGoals.reduce((s,g)=>s+g.weightage,0)
+          const allApproved = empGoals.every(g=>g.status==='approved')
           return (
-            <div key={employeeName} className="bg-white border border-gray-200 rounded-2xl mb-6 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <div key={name} className="rounded-2xl overflow-hidden mb-4" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
+              <div className="flex items-center justify-between px-6 py-4" style={{borderBottom:'1px solid #2a3347'}}>
                 <div>
-                  <p className="font-semibold text-gray-800">{employeeName}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {empGoals.length} goals · Total weightage:
-                    <span className={`ml-1 font-medium ${totalW === 100 ? 'text-green-600' : 'text-red-500'}`}>
-                      {totalW}%
-                    </span>
+                  <p className="font-bold" style={{color:'#f1f5f9'}}>{name}</p>
+                  <p className="text-xs mt-0.5" style={{color:'#475569'}}>
+                    {empGoals.length} goals · Weightage:
+                    <span className="ml-1 font-bold" style={{color:totalW===100?'#34d399':'#f87171'}}>{totalW}%</span>
                   </p>
                 </div>
-                {allApproved && (
-                  <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium">✓ All Approved</span>
-                )}
+                {allApproved && <span className="text-xs px-3 py-1 rounded-full font-medium" style={{background:'rgba(52,211,153,0.12)',color:'#34d399'}}>✓ All Approved</span>}
               </div>
 
-              <div className="divide-y divide-gray-100">
-                {empGoals.map(goal => (
-                  <div key={goal.id} className="p-6">
+              <div>
+                {empGoals.map(goal=>(
+                  <div key={goal.id} className="p-6" style={{borderBottom:'1px solid #1a2030'}}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-gray-800 text-sm">{goal.title}</p>
-                          <StatusBadge status={goal.status} />
+                          <p className="font-semibold text-sm" style={{color:'#e2e8f0'}}>{goal.title}</p>
+                          <StatusBadge status={goal.status}/>
                         </div>
-                        {goal.description && (
-                          <p className="text-xs text-gray-500 mb-2">{goal.description}</p>
-                        )}
-                        <div className="flex gap-4 text-xs text-gray-500">
+                        {goal.description && <p className="text-xs mb-2" style={{color:'#475569'}}>{goal.description}</p>}
+                        <div className="flex gap-4 text-xs" style={{color:'#334155'}}>
                           <span>🎯 {goal.thrust_area}</span>
                           <span>📊 {uomLabel[goal.uom_type]}</span>
-                          {editingGoal !== goal.id && (
-                            <>
-                              <span>Target: <strong>{goal.target}</strong></span>
-                              <span>Weight: <strong>{goal.weightage}%</strong></span>
-                            </>
-                          )}
+                          {editing!==goal.id && <>
+                            <span>Target: <strong style={{color:'#94a3b8'}}>{goal.target}</strong></span>
+                            <span>Weight: <strong style={{color:'#94a3b8'}}>{goal.weightage}%</strong></span>
+                          </>}
                         </div>
 
-                        {editingGoal === goal.id && (
+                        {editing===goal.id && (
                           <div className="mt-3 flex gap-3 items-end">
                             <div>
-                              <label className="block text-xs text-gray-500 mb-1">Target</label>
-                              <input type="number" value={editValues.target}
-                                onChange={e => setEditValues(v => ({ ...v, target: e.target.value }))}
-                                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <label className="block text-xs mb-1" style={{color:'#475569'}}>Target</label>
+                              <input type="number" value={editVals.target} onChange={e=>setEditVals(v=>({...v,target:e.target.value}))}
+                                className="rounded-lg px-3 py-1.5 text-sm w-28 focus:outline-none" style={inputStyle}/>
                             </div>
                             <div>
-                              <label className="block text-xs text-gray-500 mb-1">Weightage %</label>
-                              <input type="number" value={editValues.weightage}
-                                onChange={e => setEditValues(v => ({ ...v, weightage: e.target.value }))}
-                                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <label className="block text-xs mb-1" style={{color:'#475569'}}>Weightage %</label>
+                              <input type="number" value={editVals.weightage} onChange={e=>setEditVals(v=>({...v,weightage:e.target.value}))}
+                                className="rounded-lg px-3 py-1.5 text-sm w-24 focus:outline-none" style={inputStyle}/>
                             </div>
-                            <button onClick={() => handleSaveEdit(goal.id)} disabled={loading === goal.id}
-                              className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700 transition">
+                            <button onClick={()=>handleSaveEdit(goal.id)} disabled={loading===goal.id}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                              style={{background:'rgba(251,191,36,0.15)',color:'#fbbf24',border:'1px solid rgba(251,191,36,0.3)'}}>
                               Save
                             </button>
-                            <button onClick={() => setEditingGoal(null)}
-                              className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button onClick={()=>setEditing(null)} className="text-xs" style={{color:'#475569'}}>Cancel</button>
                           </div>
                         )}
 
-                        {goal.status === 'submitted' && (
-                          <input
-                            placeholder="Rejection note (optional)..."
-                            value={rejectNote[goal.id] ?? ''}
-                            onChange={e => setRejectNote(r => ({ ...r, [goal.id]: e.target.value }))}
-                            className="mt-3 w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-red-300 text-gray-600" />
+                        {goal.status==='submitted' && (
+                          <input placeholder="Rejection note (optional)..."
+                            value={rejectNote[goal.id]??''}
+                            onChange={e=>setRejectNote(r=>({...r,[goal.id]:e.target.value}))}
+                            className="mt-3 w-full rounded-lg px-3 py-1.5 text-xs focus:outline-none"
+                            style={inputStyle}/>
                         )}
                       </div>
 
-                      {goal.status === 'submitted' && (
+                      {goal.status==='submitted' && (
                         <div className="flex flex-col gap-2 shrink-0">
-                          <button
-                            onClick={() => { setEditingGoal(goal.id); setEditValues({ target: String(goal.target), weightage: String(goal.weightage) }) }}
-                            className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 transition">
+                          <button onClick={()=>{setEditing(goal.id);setEditVals({target:String(goal.target),weightage:String(goal.weightage)})}}
+                            className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                            style={{background:'#242d3f',color:'#94a3b8',border:'1px solid #2a3347'}}>
                             ✏️ Edit
                           </button>
-                          <button onClick={() => handleApprove(goal.id)} disabled={loading === goal.id}
-                            className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-60">
+                          <button onClick={()=>handleApprove(goal.id)} disabled={loading===goal.id}
+                            className="text-xs px-3 py-1.5 rounded-lg font-bold disabled:opacity-60"
+                            style={{background:'rgba(52,211,153,0.12)',color:'#34d399',border:'1px solid rgba(52,211,153,0.2)'}}>
                             ✓ Approve
                           </button>
-                          <button onClick={() => handleReject(goal.id)} disabled={loading === goal.id}
-                            className="text-xs px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition disabled:opacity-60">
+                          <button onClick={()=>handleReject(goal.id)} disabled={loading===goal.id}
+                            className="text-xs px-3 py-1.5 rounded-lg font-bold disabled:opacity-60"
+                            style={{background:'rgba(248,113,113,0.12)',color:'#f87171',border:'1px solid rgba(248,113,113,0.2)'}}>
                             ✗ Reject
                           </button>
                         </div>
@@ -254,15 +180,12 @@ export default function ApprovalClient({ goals, teamMembers }: {
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    submitted: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-600',
+function StatusBadge({status}:{status:string}) {
+  const map:Record<string,{color:string;bg:string}> = {
+    submitted:{color:'#fbbf24',bg:'rgba(251,191,36,0.12)'},
+    approved:{color:'#34d399',bg:'rgba(52,211,153,0.12)'},
+    rejected:{color:'#f87171',bg:'rgba(248,113,113,0.12)'},
   }
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${map[status] ?? 'bg-gray-100 text-gray-600'}`}>
-      {status}
-    </span>
-  )
+  const s = map[status]??{color:'#64748b',bg:'rgba(100,116,139,0.12)'}
+  return <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" style={{background:s.bg,color:s.color}}>{status}</span>
 }

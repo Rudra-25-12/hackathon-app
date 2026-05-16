@@ -3,218 +3,152 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
-
+const QUARTERS = ['Q1','Q2','Q3','Q4']
 const STATUS_OPTIONS = [
-  { value: 'not_started', label: '⚪ Not Started' },
-  { value: 'on_track', label: '🟡 On Track' },
-  { value: 'completed', label: '🟢 Completed' },
+  {value:'not_started',label:'⚪ Not Started'},
+  {value:'on_track',label:'🟡 On Track'},
+  {value:'completed',label:'🟢 Completed'},
 ]
 
-function computeScore(uom_type: string, target: number, actual: number): number {
-  if (!actual || !target) return 0
-  switch (uom_type) {
-    case 'numeric_min': return Math.min((actual / target) * 100, 100)
-    case 'numeric_max': return Math.min((target / actual) * 100, 100)
-    case 'zero': return actual === 0 ? 100 : 0
-    case 'timeline': return actual <= target ? 100 : Math.max(0, 100 - ((actual - target) / target) * 100)
+function computeScore(uom:string,target:number,actual:number):number {
+  if(!actual||!target) return 0
+  switch(uom) {
+    case 'numeric_min': return Math.min((actual/target)*100,100)
+    case 'numeric_max': return Math.min((target/actual)*100,100)
+    case 'zero': return actual===0?100:0
+    case 'timeline': return actual<=target?100:Math.max(0,100-((actual-target)/target)*100)
     default: return 0
   }
 }
 
-interface Goal {
-  id: string
-  title: string
-  thrust_area: string
-  uom_type: string
-  target: number
-  weightage: number
-  status: string
-}
+const inputStyle = {background:'#242d3f',border:'1px solid #2a3347',color:'#e2e8f0'}
 
-interface Checkin {
-  id: string
-  goal_id: string
-  quarter: string
-  actual_achievement: number
-  progress_status: string
-  manager_comment: string
-}
-
-export default function CheckinClient({ goals, existingCheckins }: {
-  goals: Goal[]
-  existingCheckins: Checkin[]
-}) {
-  const [activeQuarter, setActiveQuarter] = useState('Q1')
-  const [actuals, setActuals] = useState<Record<string, string>>({})
-  const [statuses, setStatuses] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+export default function CheckinClient({goals,existingCheckins}:{goals:any[];existingCheckins:any[]}) {
+  const [quarter,setQuarter] = useState('Q1')
+  const [actuals,setActuals] = useState<Record<string,string>>({})
+  const [statuses,setStatuses] = useState<Record<string,string>>({})
+  const [saving,setSaving] = useState(false)
+  const [saved,setSaved] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
-  const quarterCheckins = existingCheckins.filter(c => c.quarter === activeQuarter)
-
-  const getExisting = (goalId: string) =>
-    quarterCheckins.find(c => c.goal_id === goalId)
-
-  const getActual = (goalId: string) =>
-    actuals[goalId] ?? String(getExisting(goalId)?.actual_achievement ?? '')
-
-  const getStatus = (goalId: string) =>
-    statuses[goalId] ?? getExisting(goalId)?.progress_status ?? 'not_started'
+  const getExisting = (id:string) => existingCheckins.find(c=>c.goal_id===id&&c.quarter===quarter)
+  const getActual = (id:string) => actuals[id]??String(getExisting(id)?.actual_achievement??'')
+  const getStatus = (id:string) => statuses[id]??getExisting(id)?.progress_status??'not_started'
 
   const handleSave = async () => {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
     for (const goal of goals) {
       const actual = parseFloat(getActual(goal.id))
-      const status = getStatus(goal.id)
-      if (isNaN(actual)) continue
-
+      if(isNaN(actual)) continue
       const existing = getExisting(goal.id)
-      if (existing) {
-        await supabase.from('checkins').update({
-          actual_achievement: actual,
-          progress_status: status,
-        }).eq('id', existing.id)
+      if(existing) {
+        await supabase.from('checkins').update({actual_achievement:actual,progress_status:getStatus(goal.id)}).eq('id',existing.id)
       } else {
-        await supabase.from('checkins').insert({
-          goal_id: goal.id,
-          quarter: activeQuarter,
-          actual_achievement: actual,
-          progress_status: status,
-        })
+        await supabase.from('checkins').insert({goal_id:goal.id,quarter,actual_achievement:actual,progress_status:getStatus(goal.id)})
       }
     }
-
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    setSaving(false); setSaved(true)
+    setTimeout(()=>setSaved(false),2500)
     router.refresh()
   }
 
-  const uomLabel: Record<string, string> = {
-    numeric_min: 'Higher is better',
-    numeric_max: 'Lower is better',
-    timeline: 'Timeline (days)',
-    zero: 'Zero-based'
-  }
-
-  if (goals.length === 0) {
-    return (
-      <div className="max-w-3xl mx-auto text-center py-20 text-gray-400">
-        <p className="text-4xl mb-3">🔒</p>
-        <p className="font-medium text-gray-600">No approved goals yet</p>
-        <p className="text-sm mt-1">Check-ins are available once your manager approves your goals</p>
-      </div>
-    )
-  }
+  if(goals.length===0) return (
+    <div className="text-center py-20">
+      <p className="text-4xl mb-3">🔒</p>
+      <p className="font-semibold mb-1" style={{color:'#94a3b8'}}>No approved goals yet</p>
+      <p className="text-sm" style={{color:'#475569'}}>Check-ins unlock once your manager approves your goals</p>
+    </div>
+  )
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Quarterly Check-ins</h1>
-        <p className="text-gray-500 text-sm mt-1">Log your actual achievement against each goal</p>
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-sm font-medium mb-1" style={{color:'#fbbf24'}}>Employee</p>
+          <h1 className="text-3xl font-black" style={{color:'#f1f5f9'}}>Quarterly Check-ins</h1>
+          <p className="text-sm mt-1" style={{color:'#475569'}}>Log your actual achievement against each goal</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {saved && <p className="text-sm font-medium" style={{color:'#34d399'}}>✓ Saved!</p>}
+          <button onClick={handleSave} disabled={saving}
+            className="px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-60"
+            style={{background:'linear-gradient(135deg,#fbbf24,#f97316)',color:'#0a0a0a'}}>
+            {saving ? 'Saving...' : `Save ${quarter}`}
+          </button>
+        </div>
       </div>
 
       {/* Quarter selector */}
       <div className="flex gap-2 mb-6">
-        {QUARTERS.map(q => (
-          <button key={q} onClick={() => setActiveQuarter(q)}
-            className={`px-5 py-2 rounded-xl text-sm font-medium transition ${activeQuarter === q
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+        {QUARTERS.map(q=>(
+          <button key={q} onClick={()=>setQuarter(q)}
+            className="px-5 py-2 rounded-xl text-sm font-bold transition-all"
+            style={{background:quarter===q?'rgba(251,191,36,0.15)':'#1e2433',color:quarter===q?'#fbbf24':'#64748b',border:'1px solid',borderColor:quarter===q?'rgba(251,191,36,0.4)':'#2a3347'}}>
             {q}
           </button>
         ))}
       </div>
 
-      {/* Goals */}
       <div className="space-y-4">
-        {goals.map(goal => {
+        {goals.map(goal=>{
           const actual = parseFloat(getActual(goal.id))
-          const score = isNaN(actual) ? null : computeScore(goal.uom_type, goal.target, actual)
+          const score = isNaN(actual)?null:computeScore(goal.uom_type,goal.target,actual)
           const existing = getExisting(goal.id)
-          const managerComment = existing?.manager_comment
-
           return (
-            <div key={goal.id} className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div key={goal.id} className="rounded-2xl p-6" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="font-semibold text-gray-800">{goal.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {goal.thrust_area} · {uomLabel[goal.uom_type]} · Target: <strong>{goal.target}</strong> · Weight: <strong>{goal.weightage}%</strong>
+                  <p className="font-bold" style={{color:'#f1f5f9'}}>{goal.title}</p>
+                  <p className="text-xs mt-0.5" style={{color:'#475569'}}>
+                    {goal.thrust_area} · Target: <strong style={{color:'#94a3b8'}}>{goal.target}</strong> · Weight: <strong style={{color:'#94a3b8'}}>{goal.weightage}%</strong>
                   </p>
                 </div>
-                {score !== null && (
-                  <div className={`text-right shrink-0 ml-4`}>
-                    <p className="text-xs text-gray-400">Progress Score</p>
-                    <p className={`text-xl font-bold ${score >= 80 ? 'text-green-600' : score >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+                {score!==null && (
+                  <div className="text-right shrink-0 ml-4">
+                    <p className="text-xs mb-1" style={{color:'#475569'}}>Score</p>
+                    <p className="text-2xl font-black" style={{color:score>=80?'#34d399':score>=50?'#fbbf24':'#f87171'}}>
                       {score.toFixed(0)}%
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Actual Achievement</label>
-                  <input
-                    type="number"
-                    value={getActual(goal.id)}
-                    onChange={e => setActuals(a => ({ ...a, [goal.id]: e.target.value }))}
-                    placeholder={`Target is ${goal.target}`}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="block text-xs font-medium mb-1.5" style={{color:'#475569'}}>Actual Achievement</label>
+                  <input type="number" value={getActual(goal.id)}
+                    onChange={e=>setActuals(a=>({...a,[goal.id]:e.target.value}))}
+                    placeholder={`Target: ${goal.target}`}
+                    className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}/>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                  <select
-                    value={getStatus(goal.id)}
-                    onChange={e => setStatuses(s => ({ ...s, [goal.id]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  >
-                    {STATUS_OPTIONS.map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
+                  <label className="block text-xs font-medium mb-1.5" style={{color:'#475569'}}>Status</label>
+                  <select value={getStatus(goal.id)} onChange={e=>setStatuses(s=>({...s,[goal.id]:e.target.value}))}
+                    className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}>
+                    {STATUS_OPTIONS.map(s=><option key={s.value} value={s.value} style={{background:'#1e2433'}}>{s.label}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* Progress bar */}
-              {score !== null && (
-                <div className="mt-4">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`}
-                      style={{ width: `${score}%` }}
-                    />
-                  </div>
+              {score!==null && (
+                <div className="h-1.5 rounded-full overflow-hidden" style={{background:'#0f172a'}}>
+                  <div className="h-full rounded-full transition-all"
+                    style={{width:`${score}%`,background:score>=80?'linear-gradient(90deg,#34d399,#10b981)':score>=50?'#fbbf24':'#f87171'}}/>
                 </div>
               )}
 
-              {/* Manager comment (read-only) */}
-              {managerComment && (
-                <div className="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-3">
-                  <p className="text-xs font-medium text-blue-700 mb-1">💬 Manager Comment</p>
-                  <p className="text-xs text-blue-600">{managerComment}</p>
+              {existing?.manager_comment && (
+                <div className="mt-4 rounded-xl p-3" style={{background:'rgba(96,165,250,0.06)',border:'1px solid rgba(96,165,250,0.15)'}}>
+                  <p className="text-xs font-medium mb-1" style={{color:'#60a5fa'}}>💬 Manager Comment</p>
+                  <p className="text-xs" style={{color:'#94a3b8'}}>{existing.manager_comment}</p>
                 </div>
               )}
             </div>
           )
         })}
-      </div>
-
-      {/* Save */}
-      <div className="mt-6 flex justify-end items-center gap-4">
-        {saved && <p className="text-sm text-green-600 font-medium">✓ Saved successfully!</p>}
-        <button onClick={handleSave} disabled={saving}
-          className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition disabled:opacity-60">
-          {saving ? 'Saving...' : `Save ${activeQuarter} Check-in`}
-        </button>
       </div>
     </div>
   )
