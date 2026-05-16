@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -83,13 +82,13 @@ export default function LoginPage() {
           <div className="relative z-10 flex flex-col items-center text-center px-12">
             <div className="shimmer relative mb-8 rounded-3xl overflow-hidden p-1"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(251,191,36,0.2)' }}>
-              <Image
+              <img
                 src="/atomquest-logo.png"
                 alt="AtomQuest"
                 width={280}
                 height={280}
                 className="rounded-2xl"
-                priority
+                style={{ objectFit: 'contain' }}
               />
             </div>
 
@@ -113,7 +112,7 @@ export default function LoginPage() {
 
             {/* Mobile logo */}
             <div className="flex items-center gap-3 mb-10 lg:hidden">
-              <Image src="/atomquest-logo.png" alt="AtomQuest" width={40} height={40} className="rounded-xl" />
+              <img src="/atomquest-logo.png" alt="AtomQuest" width={40} height={40} className="rounded-xl" />
               <span className="text-white font-bold text-lg">AtomQuest</span>
             </div>
 
