@@ -1,3 +1,10 @@
+import "./globals.css";
+
+export const metadata = {
+  title: "AtomQuest Portal",
+  description: "Goal Tracking System",
+};
+
 export default function RootLayout({
   children,
 }: {
