@@ -21,5 +21,17 @@ export default async function CheckinsPage() {
     .select('*')
     .in('goal_id', goalIds.length > 0 ? goalIds : ['none'])
 
-  return <CheckinClient goals={goals ?? []} existingCheckins={checkins ?? []} />
+  const { data: cycle } = await supabase
+    .from('cycle_settings')
+    .select('active_quarter')
+    .eq('id', 1)
+    .single()
+
+  return (
+    <CheckinClient
+      goals={goals ?? []}
+      existingCheckins={checkins ?? []}
+      activeQuarter={cycle?.active_quarter ?? 'Q1'}
+    />
+  )
 }

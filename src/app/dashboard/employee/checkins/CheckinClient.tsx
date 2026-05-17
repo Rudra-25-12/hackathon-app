@@ -23,8 +23,16 @@ function computeScore(uom:string,target:number,actual:number):number {
 
 const inputStyle = {background:'#242d3f',border:'1px solid #2a3347',color:'#e2e8f0'}
 
-export default function CheckinClient({goals,existingCheckins}:{goals:any[];existingCheckins:any[]}) {
-  const [quarter,setQuarter] = useState('Q1')
+export default function CheckinClient({
+  goals,
+  existingCheckins,
+  activeQuarter,
+}: {
+  goals: any[]
+  existingCheckins: any[]
+  activeQuarter: string
+}) {
+  const [quarter,setQuarter] = useState(activeQuarter)
   const [actuals,setActuals] = useState<Record<string,string>>({})
   const [statuses,setStatuses] = useState<Record<string,string>>({})
   const [saving,setSaving] = useState(false)
@@ -37,6 +45,10 @@ export default function CheckinClient({goals,existingCheckins}:{goals:any[];exis
   const getStatus = (id:string) => statuses[id]??getExisting(id)?.progress_status??'not_started'
 
   const handleSave = async () => {
+    if (quarter !== activeQuarter) {
+      return
+    }
+
     setSaving(true)
     for (const goal of goals) {
       const actual = parseFloat(getActual(goal.id))
@@ -71,7 +83,12 @@ export default function CheckinClient({goals,existingCheckins}:{goals:any[];exis
         </div>
         <div className="flex items-center gap-3">
           {saved && <p className="text-sm font-medium" style={{color:'#34d399'}}>✓ Saved!</p>}
-          <button onClick={handleSave} disabled={saving}
+          {quarter !== activeQuarter && (
+            <p className="text-xs mr-auto" style={{color:'#f87171'}}>
+              Only {activeQuarter} is currently active
+            </p>
+          )}
+          <button onClick={handleSave} disabled={saving || quarter !== activeQuarter}
             className="px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-60"
             style={{background:'linear-gradient(135deg,#fbbf24,#f97316)',color:'#0a0a0a'}}>
             {saving ? 'Saving...' : `Save ${quarter}`}
@@ -81,13 +98,23 @@ export default function CheckinClient({goals,existingCheckins}:{goals:any[];exis
 
       {/* Quarter selector */}
       <div className="flex gap-2 mb-6">
-        {QUARTERS.map(q=>(
-          <button key={q} onClick={()=>setQuarter(q)}
-            className="px-5 py-2 rounded-xl text-sm font-bold transition-all"
-            style={{background:quarter===q?'rgba(251,191,36,0.15)':'#1e2433',color:quarter===q?'#fbbf24':'#64748b',border:'1px solid',borderColor:quarter===q?'rgba(251,191,36,0.4)':'#2a3347'}}>
-            {q}
-          </button>
-        ))}
+        {QUARTERS.map(q => {
+          const isLocked = q !== activeQuarter
+          return (
+            <button key={q} onClick={() => !isLocked && setQuarter(q)}
+              className="px-5 py-2 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: quarter === q ? 'rgba(251,191,36,0.15)' : '#1e2433',
+                color: quarter === q ? '#fbbf24' : isLocked ? '#2a3347' : '#64748b',
+                border: '1px solid',
+                borderColor: quarter === q ? 'rgba(251,191,36,0.4)' : '#2a3347',
+                cursor: isLocked ? 'not-allowed' : 'pointer',
+                opacity: isLocked ? 0.45 : 1,
+              }}>
+              {q} {isLocked ? '🔒' : ''}
+            </button>
+          )
+        })}
       </div>
 
       <div className="space-y-4">
