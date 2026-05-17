@@ -86,8 +86,8 @@ export default function LoginPage() {
               <Image
                 src="/atomquest-logo.png"
                 alt="AtomQuest"
-                width={200}
-                height={200}
+                width={280}
+                height={280}
                 priority
                 unoptimized
                 style={{ objectFit: 'contain', borderRadius: 16 }}
