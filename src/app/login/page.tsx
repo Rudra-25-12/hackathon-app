@@ -89,7 +89,9 @@ export default function LoginPage() {
                 width={280}
                 height={280}
                 priority
+                loading="eager"
                 unoptimized
+                sizes="280px"
                 style={{ objectFit: 'contain', borderRadius: 16 }}
               />
             </div>
@@ -120,7 +122,9 @@ export default function LoginPage() {
                 width={36}
                 height={36}
                 priority
+                loading="eager"
                 unoptimized
+                sizes="36px"
                 style={{ objectFit: 'contain', borderRadius: 8 }}
               />
               <span className="text-white font-bold text-lg">AtomQuest</span>

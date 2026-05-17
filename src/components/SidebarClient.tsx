@@ -64,7 +64,9 @@ export default function SidebarClient({ profile }: { profile: any }) {
             width={32}
             height={32}
             priority
+            loading="eager"
             unoptimized
+            sizes="32px"
             style={{ objectFit: 'contain', borderRadius: 8, background: '#fbbf24' }}
           />
         </div>
