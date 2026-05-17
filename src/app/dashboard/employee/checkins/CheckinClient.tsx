@@ -60,6 +60,41 @@ export default function CheckinClient({
         await supabase.from('checkins').insert({goal_id:goal.id,quarter,actual_achievement:actual,progress_status:getStatus(goal.id)})
       }
     }
+
+    // After saving, sync to shared group members
+    for (const goal of goals) {
+      if (!goal.is_shared || !goal.shared_group_id) continue
+      const actual = parseFloat(getActual(goal.id))
+      if (isNaN(actual)) continue
+
+      const { data: linkedGoals } = await supabase
+        .from('goals')
+        .select('id')
+        .eq('shared_group_id', goal.shared_group_id)
+        .neq('id', goal.id)
+
+      if (!linkedGoals?.length) continue
+
+      for (const linked of linkedGoals) {
+        const existingLinked = existingCheckins.find(
+          c => c.goal_id === linked.id && c.quarter === quarter
+        )
+        if (existingLinked) {
+          await supabase.from('checkins').update({
+            actual_achievement: actual,
+            progress_status: getStatus(goal.id),
+          }).eq('id', existingLinked.id)
+        } else {
+          await supabase.from('checkins').insert({
+            goal_id: linked.id,
+            quarter,
+            actual_achievement: actual,
+            progress_status: getStatus(goal.id),
+          })
+        }
+      }
+    }
+
     setSaving(false); setSaved(true)
     setTimeout(()=>setSaved(false),2500)
     router.refresh()

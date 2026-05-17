@@ -13,9 +13,9 @@ const darkTooltip = {
   labelStyle: { color: '#94a3b8' },
 }
 
-export default function AdminCharts({ deptStats, quarterStats, escalations, managerStats, summary, allProfiles, allGoals, allCheckins }: {
+export default function AdminCharts({ deptStats, quarterStats, escalations, managerStats, summary, allProfiles, allGoals, allCheckins, thrustStats }: {
   deptStats: any[], quarterStats: any[], escalations: any,
-  managerStats: any[], summary: any, allProfiles: any[], allGoals: any[], allCheckins: any[]
+  managerStats: any[], summary: any, allProfiles: any[], allGoals: any[], allCheckins: any[], thrustStats: any[]
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'escalations' | 'employees'>('overview')
 
@@ -184,73 +184,91 @@ export default function AdminCharts({ deptStats, quarterStats, escalations, mana
       {activeTab === 'charts' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-6">
-            <div className="rounded-2xl p-6" style={{ background: '#1e2433', border: '1px solid #2a3347' }}>
-              <h3 className="font-bold mb-4" style={{ color: '#f1f5f9' }}>Goal Status Distribution</h3>
+            <div className="rounded-2xl p-6" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
+              <h3 className="font-bold mb-4" style={{color:'#f1f5f9'}}>Goal status distribution</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={goalStatusData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}>
-                    {goalStatusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    label={({name,value})=>`${name}: ${value}`}>
+                    {goalStatusData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>) }
                   </Pie>
-                  <Tooltip {...darkTooltip} />
+                  <Tooltip {...darkTooltip}/>
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="rounded-2xl p-6" style={{ background: '#1e2433', border: '1px solid #2a3347' }}>
-              <h3 className="font-bold mb-4" style={{ color: '#f1f5f9' }}>Goals by Department</h3>
+
+            <div className="rounded-2xl p-6" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
+              <h3 className="font-bold mb-4" style={{color:'#f1f5f9'}}>Goals by department</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={deptStats}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-                  <XAxis dataKey="dept" tick={{ fill: '#475569', fontSize: 11 }} />
-                  <YAxis tick={{ fill: '#475569', fontSize: 11 }} />
-                  <Tooltip {...darkTooltip} />
-                  <Legend wrapperStyle={{ color: '#94a3b8' }} />
-                  <Bar dataKey="approved" name="Approved" fill="#34d399" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="submitted" name="Pending" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a3347"/>
+                  <XAxis dataKey="dept" tick={{fill:'#475569',fontSize:11}}/>
+                  <YAxis tick={{fill:'#475569',fontSize:11}}/>
+                  <Tooltip {...darkTooltip}/>
+                  <Legend wrapperStyle={{color:'#94a3b8'}}/>
+                  <Bar dataKey="approved" name="Approved" fill="#34d399" radius={[4,4,0,0]}/>
+                  <Bar dataKey="submitted" name="Pending" fill="#fbbf24" radius={[4,4,0,0]}/>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="rounded-2xl p-6" style={{ background: '#1e2433', border: '1px solid #2a3347' }}>
-            <h3 className="font-bold mb-4" style={{ color: '#f1f5f9' }}>Quarter-on-Quarter Check-in Progress</h3>
+          {/* QoQ trends */}
+          <div className="rounded-2xl p-6" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
+            <h3 className="font-bold mb-1" style={{color:'#f1f5f9'}}>Quarter-on-quarter check-in progress</h3>
+            <p className="text-xs mb-4" style={{color:'#475569'}}>Achievement status across all quarters</p>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={quarterStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-                <XAxis dataKey="quarter" tick={{ fill: '#475569' }} />
-                <YAxis tick={{ fill: '#475569' }} />
-                <Tooltip {...darkTooltip} />
-                <Legend wrapperStyle={{ color: '#94a3b8' }} />
-                <Bar dataKey="completed" name="Completed" fill="#34d399" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="onTrack" name="On Track" fill="#60a5fa" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="notStarted" name="Not Started" fill="#2a3347" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a3347"/>
+                <XAxis dataKey="quarter" tick={{fill:'#475569'}}/>
+                <YAxis tick={{fill:'#475569'}}/>
+                <Tooltip {...darkTooltip}/>
+                <Legend wrapperStyle={{color:'#94a3b8'}}/>
+                <Bar dataKey="completed" name="Completed" fill="#34d399" radius={[4,4,0,0]}/>
+                <Bar dataKey="onTrack" name="On Track" fill="#60a5fa" radius={[4,4,0,0]}/>
+                <Bar dataKey="notStarted" name="Not Started" fill="#2a3347" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {managerStats.length > 0 && (
-            <div className="rounded-2xl p-6" style={{ background: '#1e2433', border: '1px solid #2a3347' }}>
-              <h3 className="font-bold mb-4" style={{ color: '#f1f5f9' }}>Manager Effectiveness</h3>
+          {/* Goal distribution by thrust area */}
+          <div className="rounded-2xl p-6" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
+            <h3 className="font-bold mb-1" style={{color:'#f1f5f9'}}>Goal distribution by thrust area</h3>
+            <p className="text-xs mb-4" style={{color:'#475569'}}>Breakdown of all goals across strategic areas</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={thrustStats} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a3347"/>
+                <XAxis type="number" tick={{fill:'#475569',fontSize:11}}/>
+                <YAxis type="category" dataKey="area" tick={{fill:'#94a3b8',fontSize:11}} width={140}/>
+                <Tooltip {...darkTooltip}/>
+                <Bar dataKey="count" name="Goals" fill="#a78bfa" radius={[0,4,4,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Manager effectiveness */}
+          {managerStats.length>0&&(
+            <div className="rounded-2xl p-6" style={{background:'#1e2433',border:'1px solid #2a3347'}}>
+              <h3 className="font-bold mb-4" style={{color:'#f1f5f9'}}>Manager effectiveness</h3>
               <div className="space-y-3">
-                {managerStats.map((m, i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 rounded-xl"
-                    style={{ background: '#242d3f' }}>
+                {managerStats.map((m,i)=>(
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-xl" style={{background:'#242d3f'}}>
                     <div className="w-32 shrink-0">
-                      <p className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>{m.name}</p>
-                      <p className="text-xs" style={{ color: '#475569' }}>{m.teamSize} reports</p>
+                      <p className="text-sm font-semibold" style={{color:'#e2e8f0'}}>{m.name}</p>
+                      <p className="text-xs" style={{color:'#475569'}}>{m.teamSize} reports</p>
                     </div>
                     <div className="flex-1 grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#475569' }}>Approved</p>
-                        <p className="font-bold" style={{ color: '#34d399' }}>{m.approved}</p>
+                        <p className="text-xs mb-1" style={{color:'#475569'}}>Approved</p>
+                        <p className="font-bold" style={{color:'#34d399'}}>{m.approved}</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#475569' }}>Pending</p>
-                        <p className="font-bold" style={{ color: m.pending > 0 ? '#fbbf24' : '#475569' }}>{m.pending}</p>
+                        <p className="text-xs mb-1" style={{color:'#475569'}}>Pending</p>
+                        <p className="font-bold" style={{color:m.pending>0?'#fbbf24':'#475569'}}>{m.pending}</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#475569' }}>Comments</p>
-                        <p className="font-bold" style={{ color: '#60a5fa' }}>{m.checkinsDone}</p>
+                        <p className="text-xs mb-1" style={{color:'#475569'}}>Comments</p>
+                        <p className="font-bold" style={{color:'#60a5fa'}}>{m.checkinsDone}</p>
                       </div>
                     </div>
                   </div>

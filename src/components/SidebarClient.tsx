@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
@@ -16,6 +17,7 @@ const managerLinks = [
 ]
 const adminLinks = [
   { href: '/dashboard/admin', label: 'Overview', icon: '🏠' },
+  { href: '/dashboard/admin/escalations', label: 'Escalations', icon: '⚠️' },
   { href: '/dashboard/admin/users', label: 'Users', icon: '👥' },
   { href: '/dashboard/admin/reports', label: 'Reports', icon: '📈' },
   { href: '/dashboard/admin/audit', label: 'Audit Log', icon: '🔍' },
@@ -56,8 +58,15 @@ export default function SidebarClient({ profile }: { profile: any }) {
         style={{ borderBottom: '1px solid #252d3d' }}>
         <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0"
           style={{ background: '#fbbf24' }}>
-          <img src="/atomquest-logo.png" alt="AQ"
-            className="w-full h-full object-contain" />
+          <Image
+            src="/atomquest-logo.png"
+            alt="AQ"
+            width={32}
+            height={32}
+            priority
+            unoptimized
+            style={{ objectFit: 'contain', borderRadius: 8, background: '#fbbf24' }}
+          />
         </div>
         <div>
           <p className="font-black text-sm leading-tight" style={{ color: '#f1f5f9' }}>AtomQuest</p>

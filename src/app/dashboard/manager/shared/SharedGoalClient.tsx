@@ -49,9 +49,10 @@ export default function SharedGoalClient({ managerId, teamMembers }: {
     setSubmitting(true)
     setError('')
 
-    // Create one goal per selected employee, all linked via shared_from
-    // First insert the primary goal (for first selected member as reference)
-    const inserts = selectedMembers.map((memberId, index) => ({
+    // Generate one shared group ID for all linked goals
+    const sharedGroupId = crypto.randomUUID()
+
+    const inserts = selectedMembers.map((memberId) => ({
       employee_id: memberId,
       title: title.trim(),
       description: description.trim(),
@@ -62,7 +63,8 @@ export default function SharedGoalClient({ managerId, teamMembers }: {
       weightage: w,
       status: 'approved', // shared goals are pre-approved
       is_shared: true,
-      primary_owner_id: selectedMembers[0], // first member is primary
+      primary_owner_id: selectedMembers[0],
+      shared_group_id: sharedGroupId,
     }))
 
     const { error: insertError } = await supabase.from('goals').insert(inserts)

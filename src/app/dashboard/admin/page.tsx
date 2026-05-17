@@ -67,6 +67,12 @@ export default async function AdminDashboard() {
     }
   })
 
+  const thrustAreas = [...new Set(allGoals?.map(g => g.thrust_area).filter(Boolean))]
+  const thrustStats = thrustAreas.map(area => ({
+    area,
+    count: allGoals?.filter(g => g.thrust_area === area).length ?? 0,
+  })).sort((a,b) => b.count - a.count)
+
   return (
     <AdminCharts
       deptStats={deptStats}
@@ -76,6 +82,7 @@ export default async function AdminDashboard() {
       allProfiles={allProfiles ?? []}
       allGoals={allGoals ?? []}
       allCheckins={allCheckins ?? []}
+      thrustStats={thrustStats}
       summary={{
         employees: employees.length,
         totalGoals: allGoals?.length ?? 0,
