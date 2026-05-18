@@ -138,7 +138,7 @@ export default async function EmployeeDashboard() {
                     style={{ borderBottom: i < goals.length - 1 ? '1px solid #1a2030' : 'none' }}>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
-                        <p className="font-semibold text-sm" style={{ color: '#e2e8f0' }}>{goal.title}</p>
+                        <a href={`/dashboard/employee/goals/${goal.id}`} className="font-semibold text-sm hover:underline" style={{ color: '#e2e8f0' }}>{goal.title}</a>
                         {goal.is_shared && (
                           <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                             style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>

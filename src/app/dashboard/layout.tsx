@@ -14,11 +14,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
+  let pendingCount = 0
+  if (profile?.role === 'manager') {
+    const { data: teamMembers } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('manager_id', user.id)
+
+    const teamMemberIds = teamMembers?.map((member) => member.id) ?? ['none']
+
+    const { count } = await supabase
+      .from('goals')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'submitted')
+      .in('employee_id', teamMemberIds)
+
+    pendingCount = count ?? 0
+  }
+
   const safeProfile = profile || { name: 'User', role: 'employee', department: 'General' }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0f172a]">
-      <SidebarClient profile={safeProfile} />
+      <SidebarClient profile={safeProfile} pendingCount={pendingCount} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">

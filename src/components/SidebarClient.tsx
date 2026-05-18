@@ -11,23 +11,27 @@ interface NavLink {
   href: string;
   label: string;
   icon: string;
+  badge?: boolean;
 }
 
 const employeeLinks: NavLink[] = [
   { href: '/dashboard/employee', label: 'My Goals', icon: '🎯' },
+  { href: '/dashboard/profile', label: 'My Profile', icon: '👤' },
   { href: '/dashboard/employee/goals/new', label: 'New Goal', icon: '✚' },
   { href: '/dashboard/employee/checkins', label: 'Check-ins', icon: '📋' },
 ]
 
 const managerLinks: NavLink[] = [
   { href: '/dashboard/manager', label: 'Team Dashboard', icon: '📊' },
-  { href: '/dashboard/manager/approvals', label: 'Approvals', icon: '✅' },
+  { href: '/dashboard/profile', label: 'My Profile', icon: '👤' },
+  { href: '/dashboard/manager/approvals', label: 'Approvals', icon: '✅', badge: true },
   { href: '/dashboard/manager/checkins', label: 'Check-ins', icon: '📋' },
   { href: '/dashboard/manager/shared', label: 'Push Shared Goal', icon: '🔗' },
 ]
 
 const adminLinks: NavLink[] = [
   { href: '/dashboard/admin', label: 'Overview', icon: '🏠' },
+  { href: '/dashboard/profile', label: 'My Profile', icon: '👤' },
   { href: '/dashboard/admin/escalations', label: 'Escalations', icon: '⚠️' },
   { href: '/dashboard/admin/users', label: 'Users', icon: '👥' },
   { href: '/dashboard/admin/reports', label: 'Reports', icon: '📈' },
@@ -41,7 +45,7 @@ interface Profile {
   department?: string;
 }
 
-export default function SidebarClient({ profile }: { profile: Profile }) {
+export default function SidebarClient({ profile, pendingCount }: { profile: Profile; pendingCount: number }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -159,7 +163,15 @@ export default function SidebarClient({ profile }: { profile: Profile }) {
                 title={isCollapsed ? link.label : ''}
               >
                 <span className="text-lg">{link.icon}</span>
-                {!isCollapsed && <span>{link.label}</span>}
+                  {!isCollapsed && <span className="flex-1">{link.label}</span>}
+                  {!isCollapsed && link.badge && pendingCount > 0 && (
+                    <span
+                      className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: '#f87171', color: 'white', minWidth: 18, textAlign: 'center' }}
+                    >
+                      {pendingCount}
+                    </span>
+                  )}
               </a>
             )
           })}
