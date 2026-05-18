@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface Goal { id:string; employee_id:string; employee_name:string; title:string; description:string; thrust_area:string; uom_type:string; target:number; weightage:number; status:string }
 interface TeamMember { id:string; name:string; department:string }
@@ -30,6 +31,7 @@ export default function ApprovalClient({ goals, teamMembers }: { goals:Goal[]; t
     await supabase.from('audit_logs').insert({entity_type:'goal',entity_id:goalId,changed_by:user?.id,change_description:'Goal approved by manager'})
     const goal = goals.find(g=>g.id===goalId)
     if(goal) await fetch('/api/email/approved',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goalId,employeeId:goal.employee_id})})
+    toast.success('Goal approved!')
     setLoading(null); router.refresh()
   }
 
@@ -40,6 +42,7 @@ export default function ApprovalClient({ goals, teamMembers }: { goals:Goal[]; t
     await supabase.from('audit_logs').insert({entity_type:'goal',entity_id:goalId,changed_by:user?.id,change_description:`Rejected. Note: ${rejectNote[goalId]||'none'}`})
     const goal = goals.find(g=>g.id===goalId)
     if(goal) await fetch('/api/email/rejected',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goalId,employeeId:goal.employee_id,note:rejectNote[goalId]||''})})
+    toast.error('Goal rejected')
     setLoading(null); router.refresh()
   }
 
@@ -48,6 +51,7 @@ export default function ApprovalClient({ goals, teamMembers }: { goals:Goal[]; t
     await supabase.from('goals').update({target:parseFloat(editVals.target),weightage:parseFloat(editVals.weightage)}).eq('id',goalId)
     const {data:{user}} = await supabase.auth.getUser()
     await supabase.from('audit_logs').insert({entity_type:'goal',entity_id:goalId,changed_by:user?.id,change_description:`Manager edited: target→${editVals.target}, weightage→${editVals.weightage}%`})
+    toast.success('Goal updated!')
     setEditing(null); setLoading(null); router.refresh()
   }
 

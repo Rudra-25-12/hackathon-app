@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function UnlockClient({profiles,goals}:{profiles:any[];goals:any[]}) {
   const [unlocking,setUnlocking] = useState<string|null>(null)
@@ -26,6 +27,7 @@ export default function UnlockClient({profiles,goals}:{profiles:any[];goals:any[
     })
     setUnlocked(p=>[...p,goalId])
     setUnlocking(null)
+    toast.success('Goal unlocked for editing')
     router.refresh()
   }
 

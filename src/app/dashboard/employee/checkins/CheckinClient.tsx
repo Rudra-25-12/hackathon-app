@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 const QUARTERS = ['Q1','Q2','Q3','Q4']
 const STATUS_OPTIONS = [
@@ -36,7 +37,6 @@ export default function CheckinClient({
   const [actuals,setActuals] = useState<Record<string,string>>({})
   const [statuses,setStatuses] = useState<Record<string,string>>({})
   const [saving,setSaving] = useState(false)
-  const [saved,setSaved] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -95,8 +95,8 @@ export default function CheckinClient({
       }
     }
 
-    setSaving(false); setSaved(true)
-    setTimeout(()=>setSaved(false),2500)
+    setSaving(false)
+    toast.success(`${quarter} check-in saved!`)
     router.refresh()
   }
 
@@ -117,7 +117,6 @@ export default function CheckinClient({
           <p className="text-sm mt-1" style={{color:'#475569'}}>Log your actual achievement against each goal</p>
         </div>
         <div className="flex items-center gap-3">
-          {saved && <p className="text-sm font-medium" style={{color:'#34d399'}}>✓ Saved!</p>}
           {quarter !== activeQuarter && (
             <p className="text-xs mr-auto" style={{color:'#f87171'}}>
               Only {activeQuarter} is currently active

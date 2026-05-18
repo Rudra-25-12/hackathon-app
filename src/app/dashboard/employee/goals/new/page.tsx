@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 const THRUST_AREAS = ['Revenue Growth','Cost Optimization','Customer Satisfaction','People Development','Process Improvement','Innovation','Compliance & Risk','Digital Transformation']
 const UOM_TYPES = [
@@ -56,6 +57,7 @@ export default function NewGoalPage() {
     const { error: e } = await supabase.from('goals').insert(inserts)
     if (e) { setError('Something went wrong.'); setSubmitting(false); return }
     await fetch('/api/email/submitted',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({employeeId: user.id, goalCount: inserts.length}) })
+    toast.success('Goals submitted for approval!')
     router.push('/dashboard/employee')
     router.refresh()
   }
